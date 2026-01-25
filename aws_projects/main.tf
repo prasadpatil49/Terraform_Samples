@@ -65,4 +65,55 @@ EOF
 resource "aws_instance" "web" {
   ami           = "ami-0f2593196fe648f28"
   instance_type = "t2.micro"
+  tags = {
+    Name = "webserver"
+    Description = "Web server for the application"
+  }
+  user_data = <<EOF
+    #!/bin/bash
+    echo "Hello, World!" > index.html
+    dnf install -y httpd
+    systemctl start httpd
+    systemctl enable httpd
+    EOF
+
+  vpc_security_group_ids = [aws_security_group.webserver-sg.id]
+  key_name = aws_key_pair.webserver-key.id
+
+  provisioner "local-exec" {
+    command = "echo ${aws_instance.web.public_ip} > ${path.module}/public_ip.txt"
+  }
+}
+
+resource "aws_key_pair" "webserver-key" {
+  key_name = "webserver-key"
+  public_key = file("~/.ssh/id_rsa.pub")
+}
+
+resource "aws_security_group" "webserver-sg" {
+  name = "webserver-sg"
+  description = "Security group for the webserver"
+  ingress {
+    from_port = 80
+    to_port = 80
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+
+  }
+  ingress {
+    from_port = 22
+    to_port = 22
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    from_port = 0
+    to_port = 0
+    protocol = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+output "webserver-ip" {
+  value = aws_instance.web.public_ip
 }
