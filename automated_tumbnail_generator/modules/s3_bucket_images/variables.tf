@@ -3,6 +3,7 @@ variable "bucket_name" {
   default = "images-bucket"
 }
 
+
 variable "environment" {
   type = string
 }
